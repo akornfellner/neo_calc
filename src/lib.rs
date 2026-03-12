@@ -5,6 +5,7 @@ use eval::{ParseError, error_pointer, evaluate, fmt_value, validate_var_name};
 use leptos::*;
 use plot::draw_plot;
 use std::collections::HashMap;
+use std::time::Duration;
 
 // ── Leptos component ──────────────────────────────────────────────────────────
 
@@ -15,6 +16,7 @@ pub fn App(cx: Scope) -> impl IntoView {
     let (storing, set_storing) = create_signal(cx, false);
     let (var_name, set_var_name) = create_signal(cx, String::new());
     let (var_error, set_var_error) = create_signal(cx, String::new());
+    let var_name_input_ref = create_node_ref::<html::Input>(cx);
 
     // ── Plot state ──
     let (plot_mode, set_plot_mode) = create_signal(cx, false);
@@ -84,6 +86,14 @@ pub fn App(cx: Scope) -> impl IntoView {
             set_var_name.set(String::new());
             set_var_error.set(String::new());
             set_storing.set(true);
+            set_timeout(
+                move || {
+                    if let Some(el) = var_name_input_ref.get() {
+                        let _ = el.focus();
+                    }
+                },
+                Duration::ZERO,
+            );
         }
     };
 
@@ -201,6 +211,7 @@ pub fn App(cx: Scope) -> impl IntoView {
                                 class="store-name-input"
                                 type="text"
                                 placeholder="Variablenname"
+                                _ref=var_name_input_ref
                                 on:input=move |ev| set_var_name.set(event_target_value(&ev))
                                 on:keydown=move |ev| {
                                     if ev.key() == "Enter" {
