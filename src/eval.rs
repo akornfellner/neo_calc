@@ -111,7 +111,7 @@ impl<'a> Parser<'a> {
                     self.consume();
                     let right = self.power()?;
                     if right == 0.0 {
-                        return Err(ParseError::at("Division by zero".into(), op_pos));
+                        return Err(ParseError::at("Division durch Null".into(), op_pos));
                     }
                     left /= right;
                 }
@@ -175,7 +175,7 @@ impl<'a> Parser<'a> {
                         self.last_was_close_paren = true;
                         Ok(val)
                     }
-                    _ => Err(self.err_here("Missing closing parenthesis ')'".into())),
+                    _ => Err(self.err_here("Fehlende schließende Klammer ')'".into())),
                 }
             }
             Some('-') => {
@@ -188,8 +188,8 @@ impl<'a> Parser<'a> {
             }
             Some(c) if c.is_ascii_digit() || c == '.' => self.number(),
             Some(c) if c.is_alphabetic() || c == '_' => self.identifier(),
-            Some(c) => Err(self.err_here(format!("Unexpected character: '{}'", c))),
-            None => Err(self.err_here("Unexpected end of expression".into())),
+            Some(c) => Err(self.err_here(format!("Unerwartetes Zeichen: '{}'", c))),
+            None => Err(self.err_here("Unerwartetes Ende des Ausdrucks".into())),
         }
     }
 
@@ -205,7 +205,7 @@ impl<'a> Parser<'a> {
             }
         }
         s.parse::<f64>()
-            .map_err(|_| ParseError::at(format!("Invalid number: {}", s), start))
+            .map_err(|_| ParseError::at(format!("Ungültige Zahl: {}", s), start))
     }
 
     fn identifier(&mut self) -> Result<f64, ParseError> {
@@ -230,7 +230,7 @@ impl<'a> Parser<'a> {
                     self.last_was_close_paren = true;
                 }
                 _ => {
-                    return Err(self.err_here(format!("Missing ')' after {}(…", name)));
+                    return Err(self.err_here(format!("Fehlende ')' nach {}(…", name)));
                 }
             }
             return apply_function(&name, arg).map_err(|msg| ParseError::at(msg, start));
@@ -244,7 +244,7 @@ impl<'a> Parser<'a> {
                 .vars
                 .get(&name)
                 .copied()
-                .ok_or_else(|| ParseError::at(format!("Unknown variable '{}'", name), start)),
+                .ok_or_else(|| ParseError::at(format!("Unbekannte Variable '{}'", name), start)),
         }
     }
 }
@@ -261,7 +261,7 @@ fn apply_function(name: &str, arg: f64) -> Result<f64, String> {
         "ln" => Ok(arg.ln()),
         "sqrt" => {
             if arg < 0.0 {
-                Err("sqrt of negative number".into())
+                Err("Wurzel aus negativer Zahl".into())
             } else {
                 Ok(arg.sqrt())
             }
@@ -269,17 +269,17 @@ fn apply_function(name: &str, arg: f64) -> Result<f64, String> {
         "abs" => Ok(arg.abs()),
         "floor" => Ok(arg.floor()),
         "ceil" => Ok(arg.ceil()),
-        _ => Err(format!("Unknown function '{}'", name)),
+        _ => Err(format!("Unbekannte Funktion '{}'", name)),
     }
 }
 
 fn factorial(n: f64) -> Result<f64, String> {
     if n < 0.0 || n.fract().abs() > 1e-9 {
-        return Err("Factorial requires a non-negative integer".into());
+        return Err("Fakultät erfordert eine nicht-negative ganze Zahl".into());
     }
     let n = n.round() as u64;
     if n > 170 {
-        return Err("Factorial overflow (max 170!)".into());
+        return Err("Fakultät-Überlauf (max. 170!)".into());
     }
     let mut result: f64 = 1.0;
     for i in 2..=n {
@@ -296,7 +296,7 @@ pub(crate) fn evaluate(input: &str, vars: &HashMap<String, f64>) -> Result<f64, 
     let result = parser.expr()?;
     if parser.pos < parser.chars.len() {
         return Err(parser.err_here(format!(
-            "Unexpected character: '{}'",
+            "Unerwartetes Zeichen: '{}'",
             parser.chars[parser.pos]
         )));
     }
@@ -314,10 +314,10 @@ pub(crate) fn fmt_value(v: f64) -> String {
 
 pub(crate) fn validate_var_name(name: &str) -> Result<(), String> {
     if name.is_empty() {
-        return Err("Name cannot be empty".into());
+        return Err("Name darf nicht leer sein".into());
     }
     if RESERVED_NAMES.contains(&name) {
-        return Err(format!("'{}' is reserved", name));
+        return Err(format!("'{}' ist reserviert", name));
     }
     let mut chars = name.chars();
     let first_ok = chars
@@ -326,7 +326,9 @@ pub(crate) fn validate_var_name(name: &str) -> Result<(), String> {
         .unwrap_or(false);
     let rest_ok = chars.all(|c| c.is_alphanumeric() || c == '_');
     if !first_ok || !rest_ok {
-        return Err("Only letters, digits and '_' allowed; must start with a letter".into());
+        return Err(
+            "Nur Buchstaben, Ziffern und '_' erlaubt; muss mit einem Buchstaben beginnen".into(),
+        );
     }
     Ok(())
 }

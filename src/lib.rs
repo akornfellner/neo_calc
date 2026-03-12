@@ -122,7 +122,7 @@ pub fn App(cx: Scope) -> impl IntoView {
 
     view! { cx,
         <div class="calc-card">
-            <p class="calc-title">"Neo Calculator"</p>
+            <p class="calc-title">"Neo Rechner"</p>
 
             // ── Tab bar ──
             <div class="tab-bar">
@@ -130,12 +130,12 @@ pub fn App(cx: Scope) -> impl IntoView {
                     class="tab-btn"
                     class:tab-active=move || !plot_mode.get()
                     on:click=move |_| set_plot_mode.set(false)
-                >"Calculate"</button>
+                >"Rechnen"</button>
                 <button
                     class="tab-btn"
                     class:tab-active=move || plot_mode.get()
                     on:click=move |_| set_plot_mode.set(true)
-                >"Plot"</button>
+                >"Grafik"</button>
             </div>
 
             <div class="input-wrapper">
@@ -145,9 +145,9 @@ pub fn App(cx: Scope) -> impl IntoView {
                     type="text"
                     placeholder=move || {
                         if plot_mode.get() {
-                            "e.g. sin(x), x^2 - 3x + 1"
+                            "z.B. sin(x), x^2 - 3x + 1"
                         } else {
-                            "e.g. 2pi + sin(3!) or a*2"
+                            "z.B. 2pi + sin(3!) oder a*2"
                         }
                     }
                     prop:value=move || input.get()
@@ -168,7 +168,7 @@ pub fn App(cx: Scope) -> impl IntoView {
             // ── Calculate mode ──
             {move || (!plot_mode.get()).then(|| view! { cx,
                 <div class="calc-result">
-                    <span class="calc-result-label">"Result"</span>
+                    <span class="calc-result-label">"Ergebnis"</span>
                     <span
                         class="calc-result-value"
                         class:calc-result-error=has_error
@@ -186,21 +186,21 @@ pub fn App(cx: Scope) -> impl IntoView {
                             }
                         }
                     >
-                        "↑ Use result"
+                        "↑ Übernehmen"
                     </button>
                     <button
                         class="btn-store"
                         disabled=move || !is_valid_result()
                         on:click=on_store_click
                     >
-                        "Store"
+                        "Speichern"
                     </button>
                     {move || storing.get().then(|| view! { cx,
                         <div class="store-input-row">
                             <input
                                 class="store-name-input"
                                 type="text"
-                                placeholder="variable name"
+                                placeholder="Variablenname"
                                 on:input=move |ev| set_var_name.set(event_target_value(&ev))
                                 on:keydown=move |ev| {
                                     if ev.key() == "Enter" {
@@ -227,14 +227,14 @@ pub fn App(cx: Scope) -> impl IntoView {
             // ── Plot mode ──
             {move || plot_mode.get().then(|| view! { cx,
                 <div class="plot-range-row">
-                    <label class="plot-range-label">"x min"</label>
+                    <label class="plot-range-label">"x Min"</label>
                     <input
                         class="plot-range-input"
                         type="text"
                         prop:value=move || x_min_str.get()
                         on:input=move |ev| set_x_min_str.set(event_target_value(&ev))
                     />
-                    <label class="plot-range-label">"x max"</label>
+                    <label class="plot-range-label">"x Max"</label>
                     <input
                         class="plot-range-input"
                         type="text"
@@ -253,14 +253,14 @@ pub fn App(cx: Scope) -> impl IntoView {
             // ── Variables table ──
             {move || (!vars.get().is_empty()).then(|| view! { cx,
                 <div class="vars-header">
-                    <span class="vars-title">"Variables"</span>
-                    <button class="btn-clear-all" on:click=move |_| set_vars.set(Vec::new())>"Clear all"</button>
+                    <span class="vars-title">"Variablen"</span>
+                    <button class="btn-clear-all" on:click=move |_| set_vars.set(Vec::new())>"Alles löschen"</button>
                 </div>
                 <table class="vars-table">
                     <thead>
                         <tr>
                             <th>"Variable"</th>
-                            <th>"Value"</th>
+                            <th>"Wert"</th>
                             <th></th>
                         </tr>
                     </thead>

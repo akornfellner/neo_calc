@@ -1,4 +1,4 @@
-# neo_calc — Neo Calculator
+# neo_calc — Neo Rechner
 
 > **Note:** This is not a production project — it's my first experiment with [Leptos](https://github.com/leptos-rs/leptos) and is intended purely for learning purposes.
 >
