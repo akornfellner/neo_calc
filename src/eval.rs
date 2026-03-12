@@ -142,13 +142,22 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // postfix = factor ('!')*
+    // postfix = factor ('!' | '°')*
     fn postfix(&mut self) -> Result<f64, ParseError> {
         let mut val = self.factor()?;
-        while self.peek() == Some('!') {
-            let bang_pos = self.orig_pos();
-            self.consume();
-            val = factorial(val).map_err(|msg| ParseError::at(msg, bang_pos))?;
+        loop {
+            match self.peek() {
+                Some('!') => {
+                    let bang_pos = self.orig_pos();
+                    self.consume();
+                    val = factorial(val).map_err(|msg| ParseError::at(msg, bang_pos))?;
+                }
+                Some('°') => {
+                    self.consume();
+                    val *= std::f64::consts::PI / 180.0;
+                }
+                _ => break,
+            }
         }
         Ok(val)
     }

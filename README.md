@@ -16,33 +16,43 @@ constants listed below.
 
 ### Operators
 
-| Operator | Description                   | Example  | Result |
-| -------- | ----------------------------- | -------- | ------ |
-| `+`      | Addition                      | `2 + 3`  | `5`    |
-| `-`      | Subtraction / negation        | `10 - 3` | `7`    |
-| `*`      | Multiplication                | `4 * 5`  | `20`   |
-| `/`      | Division                      | `15 / 3` | `5`    |
-| `^`      | Exponentiation (right-assoc.) | `2^10`   | `1024` |
-| `!`      | Factorial (postfix)           | `5!`     | `120`  |
+| Operator | Description                   | Example  | Result    |
+| -------- | ----------------------------- | -------- | --------- |
+| `+`      | Addition                      | `2 + 3`  | `5`       |
+| `-`      | Subtraction / negation        | `10 - 3` | `7`       |
+| `*`      | Multiplication                | `4 * 5`  | `20`      |
+| `/`      | Division                      | `15 / 3` | `5`       |
+| `^`      | Exponentiation (right-assoc.) | `2^10`   | `1024`    |
+| `!`      | Factorial (postfix)           | `5!`     | `120`     |
+| `°`      | Degree-to-radian (postfix)    | `90°`    | `1.5707…` |
 
-Operator precedence (highest to lowest): `!` → `^` → `*` `/` → `+` `-`.
+Operator precedence (highest to lowest): `!` / `°` → `^` → `*` `/` → `+` `-`.
+
+The `°` symbol converts a value from degrees to radians (`x° = x * π / 180`).
+It can be applied to any value or sub-expression, including function arguments:
+
+| Expression  | Equivalent         | Result    |
+| ----------- | ------------------ | --------- |
+| `90°`       | `90 * pi / 180`    | `1.5707…` |
+| `sin(45°)`  | `sin(45 * pi/180)` | `0.7071…` |
+| `cos(180°)` | `cos(pi)`          | `-1`      |
 
 ### Built-in Functions
 
-| Function   | Description       | Example      | Result    |
-| ---------- | ----------------- | ------------ | --------- |
-| `sin(x)`   | Sine (radians)    | `sin(pi/2)`  | `1`       |
-| `cos(x)`   | Cosine (radians)  | `cos(0)`     | `1`       |
-| `tan(x)`   | Tangent (radians) | `tan(0)`     | `0`       |
-| `asin(x)`  | Inverse sine      | `asin(1)`    | `1.5707…` |
-| `acos(x)`  | Inverse cosine    | `acos(1)`    | `0`       |
-| `atan(x)`  | Inverse tangent   | `atan(1)`    | `0.7853…` |
-| `sqrt(x)`  | Square root       | `sqrt(16)`   | `4`       |
-| `abs(x)`   | Absolute value    | `abs(-7)`    | `7`       |
-| `log(x)`   | Base-10 logarithm | `log(1000)`  | `3`       |
-| `ln(x)`    | Natural logarithm | `ln(e)`      | `1`       |
-| `floor(x)` | Floor             | `floor(3.7)` | `3`       |
-| `ceil(x)`  | Ceiling           | `ceil(3.2)`  | `4`       |
+| Function   | Description       | Example                  | Result    |
+| ---------- | ----------------- | ------------------------ | --------- |
+| `sin(x)`   | Sine (radians)    | `sin(pi/2)` / `sin(90°)` | `1`       |
+| `cos(x)`   | Cosine (radians)  | `cos(0)` / `cos(0°)`     | `1`       |
+| `tan(x)`   | Tangent (radians) | `tan(pi/4)` / `tan(45°)` | `1`       |
+| `asin(x)`  | Inverse sine      | `asin(1)`                | `1.5707…` |
+| `acos(x)`  | Inverse cosine    | `acos(1)`                | `0`       |
+| `atan(x)`  | Inverse tangent   | `atan(1)`                | `0.7853…` |
+| `sqrt(x)`  | Square root       | `sqrt(16)`               | `4`       |
+| `abs(x)`   | Absolute value    | `abs(-7)`                | `7`       |
+| `log(x)`   | Base-10 logarithm | `log(1000)`              | `3`       |
+| `ln(x)`    | Natural logarithm | `ln(e)`                  | `1`       |
+| `floor(x)` | Floor             | `floor(3.7)`             | `3`       |
+| `ceil(x)`  | Ceiling           | `ceil(3.2)`              | `4`       |
 
 ### Built-in Constants
 
@@ -101,7 +111,7 @@ The grammar is:
 expr    = term (('+' | '-') term)*
 term    = power (('*' | '/' | implicit) power)*
 power   = postfix ('^' power)?          ← right-associative
-postfix = factor ('!')*
+postfix = factor ('!' | '°')*
 factor  = NUMBER
         | IDENT '(' expr ')'            ← function call
         | IDENT                          ← constant / variable

@@ -255,8 +255,8 @@ fn nice_ticks(min: f64, max: f64, target_count: usize) -> Vec<f64> {
 fn format_tick(v: f64) -> String {
     if v == 0.0 {
         "0".into()
-    } else if v.abs() >= 1000.0 || v.abs() < 0.01 {
-        format!("{:.1e}", v)
+    } else if v.abs() >= 1e10 || v.abs() < 0.001 {
+        format!("{:.2e}", v)
     } else {
         let s = format!("{:.4}", v);
         let s = s.trim_end_matches('0');
