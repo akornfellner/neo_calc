@@ -1,7 +1,9 @@
 mod eval;
+mod plot;
 
 use eval::{ParseError, error_pointer, evaluate, fmt_value, validate_var_name};
 use leptos::*;
+use plot::draw_plot;
 use std::collections::HashMap;
 
 // ── Leptos component ──────────────────────────────────────────────────────────
@@ -13,6 +15,12 @@ pub fn App(cx: Scope) -> impl IntoView {
     let (storing, set_storing) = create_signal(cx, false);
     let (var_name, set_var_name) = create_signal(cx, String::new());
     let (var_error, set_var_error) = create_signal(cx, String::new());
+
+    // ── Plot state ──
+    let (plot_mode, set_plot_mode) = create_signal(cx, false);
+    let (x_min_str, set_x_min_str) = create_signal(cx, "-10".to_string());
+    let (x_max_str, set_x_max_str) = create_signal(cx, "10".to_string());
+    let (plot_error, set_plot_error) = create_signal(cx, String::new());
 
     // memoised HashMap built from the vars Vec
     let vars_map = create_memo(cx, move |_| -> HashMap<String, f64> {
@@ -94,15 +102,54 @@ pub fn App(cx: Scope) -> impl IntoView {
         set_vars.update(|v| v.retain(|(n, _)| n != &name));
     };
 
+    // ── Redraw plot whenever expression, vars, range, or mode changes ──
+    create_effect(cx, move |_| {
+        if !plot_mode.get() {
+            return;
+        }
+        let expr = input.get();
+        if expr.trim().is_empty() {
+            return;
+        }
+        let xmin = x_min_str.get().parse::<f64>().unwrap_or(-10.0);
+        let xmax = x_max_str.get().parse::<f64>().unwrap_or(10.0);
+        let vm = vars_map.get();
+        match draw_plot("plot-canvas", &expr, &vm, xmin, xmax) {
+            Ok(()) => set_plot_error.set(String::new()),
+            Err(msg) => set_plot_error.set(msg),
+        }
+    });
+
     view! { cx,
         <div class="calc-card">
             <p class="calc-title">"Neo Calculator"</p>
+
+            // ── Tab bar ──
+            <div class="tab-bar">
+                <button
+                    class="tab-btn"
+                    class:tab-active=move || !plot_mode.get()
+                    on:click=move |_| set_plot_mode.set(false)
+                >"Calculate"</button>
+                <button
+                    class="tab-btn"
+                    class:tab-active=move || plot_mode.get()
+                    on:click=move |_| set_plot_mode.set(true)
+                >"Plot"</button>
+            </div>
+
             <div class="input-wrapper">
                 <input
                     class="calc-expr-input"
-                    class:has-error=has_error
+                    class:has-error=move || has_error() && !plot_mode.get()
                     type="text"
-                    placeholder="e.g. 2pi + sin(3!) or a*2"
+                    placeholder=move || {
+                        if plot_mode.get() {
+                            "e.g. sin(x), x^2 - 3x + 1"
+                        } else {
+                            "e.g. 2pi + sin(3!) or a*2"
+                        }
+                    }
                     prop:value={input.get()}
                     on:input=move |ev| {
                         set_input.set(event_target_value(&ev));
@@ -110,55 +157,86 @@ pub fn App(cx: Scope) -> impl IntoView {
                     }
                 />
                 {move || {
+                    if plot_mode.get() { return None; }
                     let ptr = error_pointer_str();
                     (!ptr.is_empty()).then(|| view! { cx,
                         <div class="error-pointer">{ptr}</div>
                     })
                 }}
             </div>
-            <div class="calc-result">
-                <span class="calc-result-label">"Result"</span>
-                <span
-                    class="calc-result-value"
-                    class:calc-result-error=has_error
-                >{result_str}</span>
-            </div>
 
-            // ── Store controls ──
-            <div class="store-row">
-                <button
-                    class="btn-store"
-                    disabled=move || !is_valid_result()
-                    on:click=on_store_click
-                >
-                    "Store"
-                </button>
-                {move || storing.get().then(|| view! { cx,
-                    <div class="store-input-row">
-                        <input
-                            class="store-name-input"
-                            type="text"
-                            placeholder="variable name"
-                            on:input=move |ev| set_var_name.set(event_target_value(&ev))
-                            on:keydown=move |ev| {
-                                if ev.key() == "Enter" {
-                                    if let Err(msg) = try_store_variable(var_name.get()) {
-                                        set_var_error.set(msg);
+            // ── Calculate mode ──
+            {move || (!plot_mode.get()).then(|| view! { cx,
+                <div class="calc-result">
+                    <span class="calc-result-label">"Result"</span>
+                    <span
+                        class="calc-result-value"
+                        class:calc-result-error=has_error
+                    >{result_str}</span>
+                </div>
+
+                // ── Store controls ──
+                <div class="store-row">
+                    <button
+                        class="btn-store"
+                        disabled=move || !is_valid_result()
+                        on:click=on_store_click
+                    >
+                        "Store"
+                    </button>
+                    {move || storing.get().then(|| view! { cx,
+                        <div class="store-input-row">
+                            <input
+                                class="store-name-input"
+                                type="text"
+                                placeholder="variable name"
+                                on:input=move |ev| set_var_name.set(event_target_value(&ev))
+                                on:keydown=move |ev| {
+                                    if ev.key() == "Enter" {
+                                        if let Err(msg) = try_store_variable(var_name.get()) {
+                                            set_var_error.set(msg);
+                                        }
+                                    }
+                                    if ev.key() == "Escape" {
+                                        set_storing.set(false);
+                                        set_var_error.set(String::new());
                                     }
                                 }
-                                if ev.key() == "Escape" {
-                                    set_storing.set(false);
-                                    set_var_error.set(String::new());
-                                }
-                            }
-                        />
-                        <button class="btn-confirm" on:click=on_confirm_store>"✓"</button>
-                        <button class="btn-cancel"  on:click=on_cancel_store>"✕"</button>
-                    </div>
+                            />
+                            <button class="btn-confirm" on:click=on_confirm_store>"✓"</button>
+                            <button class="btn-cancel"  on:click=on_cancel_store>"✕"</button>
+                        </div>
+                    })}
+                </div>
+                {move || (!var_error.get().is_empty()).then(|| view! { cx,
+                    <p class="store-error">{var_error.get()}</p>
                 })}
-            </div>
-            {move || (!var_error.get().is_empty()).then(|| view! { cx,
-                <p class="store-error">{var_error.get()}</p>
+            })}
+
+            // ── Plot mode ──
+            {move || plot_mode.get().then(|| view! { cx,
+                <div class="plot-range-row">
+                    <label class="plot-range-label">"x min"</label>
+                    <input
+                        class="plot-range-input"
+                        type="text"
+                        prop:value=move || x_min_str.get()
+                        on:input=move |ev| set_x_min_str.set(event_target_value(&ev))
+                    />
+                    <label class="plot-range-label">"x max"</label>
+                    <input
+                        class="plot-range-input"
+                        type="text"
+                        prop:value=move || x_max_str.get()
+                        on:input=move |ev| set_x_max_str.set(event_target_value(&ev))
+                    />
+                </div>
+                <div class="plot-canvas-wrapper">
+                    <canvas id="plot-canvas"></canvas>
+                </div>
+                {move || (!plot_error.get().is_empty()).then(|| view! { cx,
+                    <p class="store-error">{plot_error.get()}</p>
+                })}
             })}
 
             // ── Variables table ──

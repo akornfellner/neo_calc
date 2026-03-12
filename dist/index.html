@@ -5,8 +5,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Neo Calculator</title>
-    <link rel="stylesheet" href="/style-8baa351fdb131510.css" integrity="sha384-q0UA6sD0srUzvsUf+iiHacZ/Y+aQ+hocqwfRAvSs+z0aLVIMC6IYvOCc/F2pIf1/"/>
-<link rel="modulepreload" href="/neo_calc-c96301ca94da3bbb.js" crossorigin="anonymous" integrity="sha384-E3/eI/uYp4nxwIIjL3LRCvxl7UELzwwXZAtCu8O9OOTQfvj/+ceNpoMWyWgpUvwc"><link rel="preload" href="/neo_calc-c96301ca94da3bbb_bg.wasm" crossorigin="anonymous" integrity="sha384-vWWPaHGLWib/42oDAXNSplFmSke4tE/D9eC1CGAesIxqAsssHSk4pBkbJ3ap3PCd" as="fetch" type="application/wasm"></head>
+    <link rel="stylesheet" href="/style-c91fd2b01f5ac17c.css" integrity="sha384-YFJIKJfBJ23iYH50KWCoF0rqo4mEhfkY48ywTV7J8nXRdk4wHCeYBc4iBuqer3Dh"/>
+<link rel="modulepreload" href="/neo_calc-5cc6e2f25a10384a.js" crossorigin="anonymous" integrity="sha384-Ad7wo9eLFutjMSBblvqyxf97Sq9hf8SC/HHqXk19/+17TorY4GcUmimz/LD4OUbQ"><link rel="preload" href="/neo_calc-5cc6e2f25a10384a_bg.wasm" crossorigin="anonymous" integrity="sha384-dBqYgBlTxOiH/3Wi6PDzx7tMs7Z0rYrfsNGxJl6CiP4ZSw+fRwEjkDi8TnVp1nfu" as="fetch" type="application/wasm"></head>
 
 <body>
     <!-- Matrix rain canvas (sits behind everything) -->
@@ -89,8 +89,8 @@
     </script>
 
 <script type="module">
-import init, * as bindings from '/neo_calc-c96301ca94da3bbb.js';
-const wasm = await init({ module_or_path: '/neo_calc-c96301ca94da3bbb_bg.wasm' });
+import init, * as bindings from '/neo_calc-5cc6e2f25a10384a.js';
+const wasm = await init({ module_or_path: '/neo_calc-5cc6e2f25a10384a_bg.wasm' });
 
 
 window.wasmBindings = bindings;
