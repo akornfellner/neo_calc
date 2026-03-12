@@ -1,0 +1,65 @@
+name: Build & Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]       # adjust if your default branch is named differently
+  workflow_dispatch:       # allow manual runs from the Actions tab
+
+permissions:
+  contents: read
+  pages: write             # required to deploy to Pages
+  id-token: write          # required for OIDC token used by deploy-pages
+
+# Only one deployment at a time; cancel older runs in progress
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust stable + wasm32 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      # Cache Cargo registry and compiled dependencies to speed up subsequent runs
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Install Trunk
+        uses: jetli/trunk-action@v0.5.0
+        with:
+          version: latest
+
+      # GitHub Pages serves the site at https://<user>.github.io/<repo>/
+      # so all asset URLs must be rooted at /<repo>/.
+      - name: Build with Trunk
+        run: trunk build --release --public-url "/${{ github.event.repository.name }}/"
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4

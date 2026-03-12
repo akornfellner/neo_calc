@@ -1,0 +1,20 @@
+[package]
+name = "neo_calc"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Leptos provides the reactive web framework and macros used by the
+# components below. We enable the `csr` feature to build a client-side
+# (WASM) application. Add other features (e.g. "ssr") as needed later.
+leptos = { version = "0.4", features = ["csr"] }
+
+# The macro crate is generally re-exported by `leptos`, but explicitly
+# depending on it makes the intent clear and avoids version mismatches.
+leptos_macro = "0.4"
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Neo Calculator</title>
+    <link data-trunk rel="css" href="style.css" />
+</head>
+
+<body>
+    <!-- Matrix rain canvas (sits behind everything) -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- Leptos will mount the app here -->
+    <div id="root"></div>
+
+    <!-- When using `trunk`, it will replace the script with the
+         generated javascript/wasm bundle.  The import path below
+         mirrors the default crate name; adjust if you change the
+         package name in Cargo.toml. -->
+    <script type="module">
+        import init from "./pkg/neo_calc.js";
+        init();
+    </script>
+
+    <!-- Matrix rain animation with mathematical symbols -->
+    <script>
+        (function () {
+            const canvas = document.getElementById('matrix-canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Mathematical symbols used as falling characters
+            const CHARS = (
+                'π Σ ∫ √ ∞ Δ Ω ∂ ∇ α β γ θ λ μ φ ω ' +
+                '± × ÷ ≈ ≠ ≤ ≥ ² ³ ⁴ ⁿ ' +
+                'ℕ ℤ ℝ ℂ ℚ ' +
+                '∀ ∃ ∈ ∉ ∏ ∧ ∨ ⊕ ∮ ⊂ ⊃ ∩ ∪ ' +
+                '℃ ℉ ∥ ⊥ ∠ ⌀ ℏ '
+            ).trim().split(' ');
+
+            const FS = 18; // font size / column width in px
+            let cols, drops;
+
+            function init() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                cols = Math.floor(canvas.width / FS);
+                // Start drops at random negative positions so they stagger nicely
+                drops = Array.from({ length: cols }, () =>
+                    -Math.floor(Math.random() * (canvas.height / FS))
+                );
+            }
+
+            window.addEventListener('resize', init);
+            init();
+
+            function step() {
+                // Semi-transparent black overlay creates the fading trail effect
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.045)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.font = FS + 'px "Share Tech Mono", monospace';
+
+                for (let i = 0; i < cols; i++) {
+                    const y = drops[i] * FS;
+                    if (y < 0) {
+                        drops[i] += 0.4;
+                        continue;
+                    }
+
+                    const ch = CHARS[Math.floor(Math.random() * CHARS.length)];
+                    const x = i * FS;
+
+                    // Draw the head character — bright green-white
+                    ctx.fillStyle = 'rgba(180, 255, 180, 0.85)';
+                    ctx.fillText(ch, x, y);
+
+                    // Randomly reset the drop when it exits below the screen
+                    if (y > canvas.height && Math.random() > 0.975) {
+                        drops[i] = -Math.floor(Math.random() * 20);
+                    }
+                    drops[i] += 0.5;
+                }
+            }
+
+            setInterval(step, 40);
+        }());
+    </script>
+</body>
+
+</html>
