@@ -177,6 +177,29 @@ body {
     gap: 0.6rem;
 }
 
+.btn-use-result {
+    background: var(--green-faint);
+    border: 1px solid var(--green-dim);
+    border-radius: 2px;
+    color: var(--green);
+    font-family: var(--font);
+    font-size: 1rem;
+    letter-spacing: 0.1em;
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.btn-use-result:hover:not(:disabled) {
+    background: rgba(0, 255, 65, 0.15);
+    box-shadow: 0 0 8px var(--green-glow);
+}
+
+.btn-use-result:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
 .btn-store {
     background: var(--green-faint);
     border: 1px solid var(--green-dim);

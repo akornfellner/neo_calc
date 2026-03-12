@@ -150,7 +150,7 @@ pub fn App(cx: Scope) -> impl IntoView {
                             "e.g. 2pi + sin(3!) or a*2"
                         }
                     }
-                    prop:value={input.get()}
+                    prop:value=move || input.get()
                     on:input=move |ev| {
                         set_input.set(event_target_value(&ev));
                         set_storing.set(false);
@@ -177,6 +177,17 @@ pub fn App(cx: Scope) -> impl IntoView {
 
                 // ── Store controls ──
                 <div class="store-row">
+                    <button
+                        class="btn-use-result"
+                        disabled=move || !is_valid_result()
+                        on:click=move |_| {
+                            if let Some(Ok(v)) = result_value.get() {
+                                set_input.set(fmt_value(v));
+                            }
+                        }
+                    >
+                        "↑ Use result"
+                    </button>
                     <button
                         class="btn-store"
                         disabled=move || !is_valid_result()

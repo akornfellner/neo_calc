@@ -1,2 +1,10 @@
+# Rust build artifacts
 /target
-/Cargo.lock
+
+# trunk output (production build)
+/dist
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
