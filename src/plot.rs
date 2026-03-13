@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use wasm_bindgen::JsCast;
 use web_sys::CanvasRenderingContext2d;
 
-use crate::eval::evaluate;
+use crate::eval::{eval_parsed_with_x, parse_expression};
 
 const CANVAS_W: f64 = 640.0;
 const CANVAS_H: f64 = 480.0;
@@ -50,15 +50,14 @@ pub(crate) fn draw_plot(
     }
 
     // Sample points
+    let parsed = parse_expression(expr, vars).map_err(|e| e.msg)?;
     let step = (x_max - x_min) / SAMPLES as f64;
     let mut points: Vec<Option<(f64, f64)>> = Vec::with_capacity(SAMPLES + 1);
     let mut y_vals: Vec<f64> = Vec::new();
 
     for i in 0..=SAMPLES {
         let x = x_min + i as f64 * step;
-        let mut eval_vars = vars.clone();
-        eval_vars.insert("x".into(), x);
-        match evaluate(expr, &eval_vars) {
+        match eval_parsed_with_x(&parsed, vars, x) {
             Ok(y) if y.is_finite() => {
                 points.push(Some((x, y)));
                 y_vals.push(y);

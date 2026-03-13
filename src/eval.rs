@@ -27,6 +27,37 @@ impl ParseError {
     }
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum Expr {
+    Number(f64),
+    Constant(&'static str),
+    Variable {
+        name: String,
+        pos: usize,
+    },
+    Unary {
+        op: char,
+        pos: usize,
+        expr: Box<Expr>,
+    },
+    Binary {
+        op: char,
+        pos: usize,
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
+    Function {
+        name: String,
+        pos: usize,
+        arg: Box<Expr>,
+    },
+    Postfix {
+        op: char,
+        pos: usize,
+        expr: Box<Expr>,
+    },
+}
+
 struct Parser<'a> {
     chars: Vec<char>,
     pos: usize,
@@ -79,17 +110,29 @@ impl<'a> Parser<'a> {
     }
 
     // expr = term (('+' | '-') term)*
-    fn expr(&mut self) -> Result<f64, ParseError> {
+    fn expr(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.term()?;
         loop {
             match self.peek() {
                 Some('+') => {
+                    let pos = self.orig_pos();
                     self.consume();
-                    left += self.term()?;
+                    left = Expr::Binary {
+                        op: '+',
+                        pos,
+                        left: Box::new(left),
+                        right: Box::new(self.term()?),
+                    };
                 }
                 Some('-') => {
+                    let pos = self.orig_pos();
                     self.consume();
-                    left -= self.term()?;
+                    left = Expr::Binary {
+                        op: '-',
+                        pos,
+                        left: Box::new(left),
+                        right: Box::new(self.term()?),
+                    };
                 }
                 _ => break,
             }
@@ -98,22 +141,29 @@ impl<'a> Parser<'a> {
     }
 
     // term = power (('*' | '/' | implicit) power)*
-    fn term(&mut self) -> Result<f64, ParseError> {
+    fn term(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.power()?;
         loop {
             match self.peek() {
                 Some('*') => {
+                    let pos = self.orig_pos();
                     self.consume();
-                    left *= self.power()?;
+                    left = Expr::Binary {
+                        op: '*',
+                        pos,
+                        left: Box::new(left),
+                        right: Box::new(self.power()?),
+                    };
                 }
                 Some('/') => {
-                    let op_pos = self.orig_pos();
+                    let pos = self.orig_pos();
                     self.consume();
-                    let right = self.power()?;
-                    if right == 0.0 {
-                        return Err(ParseError::at("Division durch Null".into(), op_pos));
-                    }
-                    left /= right;
+                    left = Expr::Binary {
+                        op: '/',
+                        pos,
+                        left: Box::new(left),
+                        right: Box::new(self.power()?),
+                    };
                 }
                 // implicit multiplication: 2pi, 3(4+5), (2)(3), pi(2), etc.
                 Some(c)
@@ -122,7 +172,12 @@ impl<'a> Parser<'a> {
                         || c == '_'
                         || (c.is_ascii_digit() && self.last_was_close_paren) =>
                 {
-                    left *= self.power()?;
+                    left = Expr::Binary {
+                        op: '*',
+                        pos: self.orig_pos(),
+                        left: Box::new(left),
+                        right: Box::new(self.power()?),
+                    };
                 }
                 _ => break,
             }
@@ -131,30 +186,44 @@ impl<'a> Parser<'a> {
     }
 
     // power = postfix ('^' power)?  — right-associative
-    fn power(&mut self) -> Result<f64, ParseError> {
+    fn power(&mut self) -> Result<Expr, ParseError> {
         let base = self.postfix()?;
         if self.peek() == Some('^') {
+            let pos = self.orig_pos();
             self.consume();
-            let exp = self.power()?;
-            Ok(base.powf(exp))
+            Ok(Expr::Binary {
+                op: '^',
+                pos,
+                left: Box::new(base),
+                right: Box::new(self.power()?),
+            })
         } else {
             Ok(base)
         }
     }
 
     // postfix = factor ('!' | '°')*
-    fn postfix(&mut self) -> Result<f64, ParseError> {
+    fn postfix(&mut self) -> Result<Expr, ParseError> {
         let mut val = self.factor()?;
         loop {
             match self.peek() {
                 Some('!') => {
-                    let bang_pos = self.orig_pos();
+                    let pos = self.orig_pos();
                     self.consume();
-                    val = factorial(val).map_err(|msg| ParseError::at(msg, bang_pos))?;
+                    val = Expr::Postfix {
+                        op: '!',
+                        pos,
+                        expr: Box::new(val),
+                    };
                 }
                 Some('°') => {
+                    let pos = self.orig_pos();
                     self.consume();
-                    val *= std::f64::consts::PI / 180.0;
+                    val = Expr::Postfix {
+                        op: '°',
+                        pos,
+                        expr: Box::new(val),
+                    };
                 }
                 _ => break,
             }
@@ -163,7 +232,7 @@ impl<'a> Parser<'a> {
     }
 
     // factor = number | identifier/function | '(' expr ')' | unary
-    fn factor(&mut self) -> Result<f64, ParseError> {
+    fn factor(&mut self) -> Result<Expr, ParseError> {
         self.last_was_close_paren = false;
         match self.peek() {
             Some('(') => {
@@ -179,12 +248,22 @@ impl<'a> Parser<'a> {
                 }
             }
             Some('-') => {
+                let pos = self.orig_pos();
                 self.consume();
-                Ok(-self.factor()?)
+                Ok(Expr::Unary {
+                    op: '-',
+                    pos,
+                    expr: Box::new(self.factor()?),
+                })
             }
             Some('+') => {
+                let pos = self.orig_pos();
                 self.consume();
-                self.factor()
+                Ok(Expr::Unary {
+                    op: '+',
+                    pos,
+                    expr: Box::new(self.factor()?),
+                })
             }
             Some(c) if c.is_ascii_digit() || c == '.' => self.number(),
             Some(c) if c.is_alphabetic() || c == '_' => self.identifier(),
@@ -193,7 +272,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn number(&mut self) -> Result<f64, ParseError> {
+    fn number(&mut self) -> Result<Expr, ParseError> {
         let start = self.orig_pos();
         let mut s = String::new();
         while let Some(c) = self.peek() {
@@ -205,10 +284,11 @@ impl<'a> Parser<'a> {
             }
         }
         s.parse::<f64>()
+            .map(Expr::Number)
             .map_err(|_| ParseError::at(format!("Ungültige Zahl: {}", s), start))
     }
 
-    fn identifier(&mut self) -> Result<f64, ParseError> {
+    fn identifier(&mut self) -> Result<Expr, ParseError> {
         let start = self.orig_pos();
         let mut name = String::new();
         while let Some(c) = self.peek() {
@@ -233,18 +313,98 @@ impl<'a> Parser<'a> {
                     return Err(self.err_here(format!("Fehlende ')' nach {}(…", name)));
                 }
             }
-            return apply_function(&name, arg).map_err(|msg| ParseError::at(msg, start));
+            return Ok(Expr::Function {
+                name,
+                pos: start,
+                arg: Box::new(arg),
+            });
         }
 
         // built-in constants
         match name.as_str() {
-            "pi" => Ok(std::f64::consts::PI),
-            "e" => Ok(std::f64::consts::E),
-            _ => self
-                .vars
-                .get(&name)
+            "pi" => Ok(Expr::Constant("pi")),
+            "e" => Ok(Expr::Constant("e")),
+            "x" => Ok(Expr::Variable { name, pos: start }),
+            _ if self.vars.contains_key(&name) => Ok(Expr::Variable { name, pos: start }),
+            _ => Err(ParseError::at(
+                format!("Unbekannte Variable '{}'", name),
+                start,
+            )),
+        }
+    }
+}
+
+fn eval_expr(
+    expr: &Expr,
+    vars: &HashMap<String, f64>,
+    x_override: Option<f64>,
+) -> Result<f64, ParseError> {
+    match expr {
+        Expr::Number(v) => Ok(*v),
+        Expr::Constant("pi") => Ok(std::f64::consts::PI),
+        Expr::Constant("e") => Ok(std::f64::consts::E),
+        Expr::Constant(name) => Err(ParseError::at(format!("Unbekannte Konstante '{}'", name), 0)),
+        Expr::Variable { name, pos } => {
+            if name == "x" {
+                if let Some(x) = x_override {
+                    return Ok(x);
+                }
+            }
+            vars.get(name)
                 .copied()
-                .ok_or_else(|| ParseError::at(format!("Unbekannte Variable '{}'", name), start)),
+                .ok_or_else(|| ParseError::at(format!("Unbekannte Variable '{}'", name), *pos))
+        }
+        Expr::Unary { op, expr, .. } => {
+            let value = eval_expr(expr, vars, x_override)?;
+            match op {
+                '+' => Ok(value),
+                '-' => Ok(-value),
+                _ => Err(ParseError::at(
+                    format!("Unbekannter unärer Operator '{}'", op),
+                    0,
+                )),
+            }
+        }
+        Expr::Binary {
+            op,
+            pos,
+            left,
+            right,
+        } => {
+            let lhs = eval_expr(left, vars, x_override)?;
+            let rhs = eval_expr(right, vars, x_override)?;
+            match op {
+                '+' => Ok(lhs + rhs),
+                '-' => Ok(lhs - rhs),
+                '*' => Ok(lhs * rhs),
+                '/' => {
+                    if rhs == 0.0 {
+                        Err(ParseError::at("Division durch Null".into(), *pos))
+                    } else {
+                        Ok(lhs / rhs)
+                    }
+                }
+                '^' => Ok(lhs.powf(rhs)),
+                _ => Err(ParseError::at(
+                    format!("Unbekannter binärer Operator '{}'", op),
+                    *pos,
+                )),
+            }
+        }
+        Expr::Function { name, pos, arg } => {
+            let value = eval_expr(arg, vars, x_override)?;
+            apply_function(name, value).map_err(|msg| ParseError::at(msg, *pos))
+        }
+        Expr::Postfix { op, pos, expr } => {
+            let value = eval_expr(expr, vars, x_override)?;
+            match op {
+                '!' => factorial(value).map_err(|msg| ParseError::at(msg, *pos)),
+                '°' => Ok(value * std::f64::consts::PI / 180.0),
+                _ => Err(ParseError::at(
+                    format!("Unbekannter Postfix-Operator '{}'", op),
+                    *pos,
+                )),
+            }
         }
     }
 }
@@ -288,19 +448,39 @@ fn factorial(n: f64) -> Result<f64, String> {
     Ok(result)
 }
 
-pub(crate) fn evaluate(input: &str, vars: &HashMap<String, f64>) -> Result<f64, ParseError> {
+pub(crate) fn parse_expression(
+    input: &str,
+    vars: &HashMap<String, f64>,
+) -> Result<Expr, ParseError> {
     if input.trim().is_empty() {
-        return Ok(0.0);
+        return Ok(Expr::Number(0.0));
     }
     let mut parser = Parser::new(input, vars);
-    let result = parser.expr()?;
+    let expr = parser.expr()?;
     if parser.pos < parser.chars.len() {
         return Err(parser.err_here(format!(
             "Unerwartetes Zeichen: '{}'",
             parser.chars[parser.pos]
         )));
     }
-    Ok(result)
+    Ok(expr)
+}
+
+pub(crate) fn eval_parsed(expr: &Expr, vars: &HashMap<String, f64>) -> Result<f64, ParseError> {
+    eval_expr(expr, vars, None)
+}
+
+pub(crate) fn eval_parsed_with_x(
+    expr: &Expr,
+    vars: &HashMap<String, f64>,
+    x: f64,
+) -> Result<f64, String> {
+    eval_expr(expr, vars, Some(x)).map_err(|e| e.msg)
+}
+
+pub(crate) fn evaluate(input: &str, vars: &HashMap<String, f64>) -> Result<f64, ParseError> {
+    let expr = parse_expression(input, vars)?;
+    eval_parsed(&expr, vars)
 }
 
 pub(crate) fn fmt_value(v: f64) -> String {
