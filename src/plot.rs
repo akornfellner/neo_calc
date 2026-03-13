@@ -45,7 +45,7 @@ pub(crate) fn draw_plot(
     ctx.fill_rect(0.0, 0.0, CANVAS_W, CANVAS_H);
 
     if x_min >= x_max {
-        draw_message(&ctx, "x min must be less than x max");
+        draw_message(&ctx, "x-Min muss kleiner als x-Max sein");
         return Ok(());
     }
 
@@ -68,7 +68,7 @@ pub(crate) fn draw_plot(
     }
 
     if y_vals.is_empty() {
-        draw_message(&ctx, "No valid points to plot");
+        draw_message(&ctx, "Keine gueltigen Punkte zum Plotten");
         return Ok(());
     }
 
